@@ -1,36 +1,127 @@
-import warnings #thư viện để tắt các thông báo không cần thiết.
+import warnings
+from PIL import Image, ImageEnhance
 warnings.filterwarnings('ignore')
-from tensorflow import keras
-from keras.layers import Input, Lambda, Dense, Flatten
-from keras.models import Model
-from keras.applications.vgg16 import VGG16
-from keras.applications.vgg16 import preprocess_input
-from keras.preprocessing import image
-from keras.src.legacy.preprocessing.image import ImageDataGenerator
-from keras.models import Sequential
-import numpy as np
-from glob import glob
-import matplotlib.pyplot as plt
-IMAGE_SIZE=[224, 224] #kích thước ảnh đầu vào cho mô hình
-train_path='Datasets/train'#đường dẫn đến thư mục chứa dữ liệu huấn luyện
-valid_path='Datasets/test' #đường dẫn đến thư mục chứa dữ liệu kiểm tra
-vgg=VGG16(input_shape=IMAGE_SIZE+[3],weights='imagenet',include_top=False)
-for layer in vgg.layers:#Đóng băng các layer trong mô hình VGG16 để không được huấn luyện lại.
-    layer.trainable=False
-folders=glob('Datasets/train/*')#Tìm kiếm các thư mục con trong thư mục huấn luyện.
-x=Flatten()(vgg.output)
-prediction=Dense(len(folders),activation='softmax')(x)
-model =Model(inputs=vgg.input,outputs=prediction)#Tạo mô hình từ đầu vào của VGG16 và đầu ra của lớp Dense.
-model.summary()#Hiển thị thông tin của mô hình
-model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])#thiết lập thông số huấn luyện
-from keras.src.legacy.preprocessing.image import ImageDataGenerator
-train_datagen = ImageDataGenerator(rescale = 1./255,shear_range = 0.2,zoom_range = 0.2,horizontal_flip = True)
-test_datagen = ImageDataGenerator(rescale = 1./255)
-training_set = train_datagen.flow_from_directory('Datasets/train',target_size =(224, 224),batch_size = 10,class_mode = 'categorical')
-test_set = test_datagen.flow_from_directory('Datasets/test',target_size = (224, 224),batch_size = 10,class_mode = 'categorical')
-model.fit(training_set,validation_data=test_set,epochs=1,steps_per_epoch=len(training_set),validation_steps=len(test_set)
-)
 import tensorflow as tf
 from keras.models import load_model
-model.save('xray.h5')#Lưu mô hình đã huấn luyện vào một tệp tin có tên là 'xray.h5'. 
-#Mô hình có thể được sử dụng sau này để dự đoán bệnh viêm phổi từ ảnh X-quang mới.
+from keras.applications.vgg16 import preprocess_input
+import numpy as np
+from keras.preprocessing import image
+#import các lớp và module từ thư viện PyQt5 để tạo giao diện người dùng đồ họa.
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtGui import QMovie
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtCore import Qt
+
+from win32com.client import Dispatch#import module "win32com.client" để sử dụng giọng nói của máy tính.
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+def speak(str1):
+    speak = Dispatch(("SAPI.SpVoice"))
+    speak.Speak(str1)
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        #hàm def "setupUi" để thiết lập giao diện người dùng cho cửa sổ chính.
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(695, 609)
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.frame = QtWidgets.QFrame(self.centralwidget)
+        self.frame.setGeometry(QtCore.QRect(0, 0, 701, 611))
+        self.frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame.setObjectName("frame")
+        self.label = QtWidgets.QLabel(self.frame)
+        self.label.setGeometry(QtCore.QRect(0, 0, 701, 611))
+        self.label.setText("")
+        self.label.setPixmap(QtGui.QPixmap("nen.png"))
+        self.label.setScaledContents(True)
+        self.label.setObjectName("label")
+        self.label_2 = QtWidgets.QLabel(self.frame)
+        self.label_2.setGeometry(QtCore.QRect(80, 430, 591, 41))
+        font = QtGui.QFont()
+        font.setPointSize(24)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.pushButton = QtWidgets.QPushButton(self.frame)
+        self.pushButton.setGeometry(QtCore.QRect(30, 530, 201, 31))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setWeight(75)
+        icon = QtGui.QIcon("picture.jpg")
+        MainWindow.setWindowIcon(icon)
+        self.pushButton.setFont(font)
+        self.pushButton.setStyleSheet("QPushButton{\n"
+"border-radius: 10px;\n"
+" background-color:#DF582C;\n"
+"\n"
+"}\n"
+"QPushButton:hover {\n"
+" background-color: #7D93E0;\n"
+"}")
+        self.pushButton.setObjectName("pushButton")
+        self.pushButton_2 = QtWidgets.QPushButton(self.frame)
+        self.pushButton_2.setGeometry(QtCore.QRect(450, 530, 201, 31))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setWeight(75)
+        self.pushButton_2.setFont(font)
+        self.pushButton_2.setStyleSheet("QPushButton{\n"
+"border-radius: 10px;\n"
+" background-color:#DF582C;\n"
+"\n"
+"}\n"
+"QPushButton:hover {\n"
+" background-color: #7D93E0;\n"
+"}")
+        self.pushButton_2.setObjectName("pushButton_2")
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        self.pushButton.clicked.connect(self.upload_image)
+        self.pushButton_2.clicked.connect(self.predict_result)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "Xu ly anh y hoc"))
+        self.label_2.setText(_translate("MainWindow", "Nhận biết bệnh viêm phổi"))
+        self.pushButton.setText(_translate("MainWindow", "Upload hình ảnh"))
+        self.pushButton_2.setText(_translate("MainWindow", "Dự đoán"))
+
+    def upload_image(self):
+        filename = QFileDialog.getOpenFileName()
+        path = str(path)
+        print(path)
+        model = load_model('xray.h5') 
+        img_file = image.load_img(path, target_size=(224,224))
+        x = image.img_to_array(img_file)
+        x = np.expand_dims(x, axis=0)
+        img_data = preprocess_input(x)
+        classes = model.predict(img_data)
+        global result
+        result = classes    
+        #Hàm def này để xử lý khi người dùng ấn vào nút "upload hình ảnh".Nó sẽ mở hộp thoại để chọn ảnh và tiến hành dự đoán bệnh.
+    def predict_result(self):
+        print(result)
+        if result[0][0] > 0.5:
+            speak("Normal")
+        else:
+            speak("PNEUMONIA")
+        #Hàm def này xử lý sự kiện khi người dùng ấn vào nút "Dự đoán". Nó in kết quả dự đoán và sử dụng giọng nói để phát ra thông báo kết quả.
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())
+    #Đây là mã thực thi chính. Nó tạo một ứng dụng PyQt5, thiết lập giao diện người dùng và hiển thị cửa sổ chính của ứng dụng.
